@@ -22,9 +22,9 @@ public class EmployeeRestController {
     EmployeeService employeeService;
 
     @PostMapping("/importCsv")
-    public String importCsv(@RequestParam(value = "file") MultipartFile file, @RequestParam(required = false) String dateFormat) throws IOException {
+    public List<EmployeePair> parseEmployeesJson(@RequestParam(value = "file") MultipartFile file, @RequestParam(required = false) String dateFormat) throws IOException {
 
-        if(dateFormat == null) {
+        if (dateFormat == null) {
             dateFormat = "yyyy-MM-dd";
         }
         File tempFile = null;
@@ -37,15 +37,20 @@ public class EmployeeRestController {
                     Comparator.comparingInt(EmployeePair::timeWorkedTogether).reversed()
             );
 
-            return list.stream().map(
-                    employeePair -> employeePair.employee1() + ", " + employeePair.employee2() + ", " + employeePair.timeWorkedTogether()
-            ).collect(Collectors.joining("\n"));
+            return list;
         } finally {
             if (tempFile != null) {
                 //noinspection ResultOfMethodCallIgnored
                 tempFile.delete();
             }
         }
+    }
 
+
+    @PostMapping("/importCsvStr")
+    public String parseEmployeesString(@RequestParam(value = "file") MultipartFile file, @RequestParam(required = false) String dateFormat) throws IOException {
+        return parseEmployeesJson(file, dateFormat).stream().map(
+                employeePair -> employeePair.employee1() + ", " + employeePair.employee2() + ", " + employeePair.timeWorkedTogether()
+        ).collect(Collectors.joining("\n"));
     }
 }

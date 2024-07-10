@@ -3,7 +3,6 @@ package com.programtom.toma_velev_employees.service;
 import com.opencsv.CSVReader;
 import com.programtom.toma_velev_employees.model.EmployeeData;
 import com.programtom.toma_velev_employees.model.EmployeePair;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -64,19 +63,13 @@ public class EmployeeService {
 
         temp.forEach(
                 employeeData -> {
-                    List<EmployeeData> employeeData1 = projects.get(employeeData.projectId());
-                    if (employeeData1 == null) {
-                        employeeData1 = new ArrayList<>();
-                        projects.put(employeeData.projectId(), employeeData1);
-                    }
+                    List<EmployeeData> employeeData1 = projects.computeIfAbsent(employeeData.projectId(), k -> new ArrayList<>());
                     employeeData1.add(employeeData);
                 }
         );
 
-        HashMap<Pair<Integer, Integer>, Integer> workTogether = new HashMap<>();
-
         projects.forEach(
-                (integer, employeeData) -> {
+                (projectId, employeeData) -> {
                     if (employeeData.size() > 1) {
                         for (int i = 0; i < employeeData.size(); i++) {
                             for (int j = i + 1; j < employeeData.size(); j++) {
@@ -85,27 +78,21 @@ public class EmployeeService {
                                 EmployeeData employeeData2 = employeeData.get(j);
 //        1)case
 //        1 --------s----e
-//        2 --se------
-//        2)case
-//        1 --se------
-//        2 --------s----e
+//        2 --se----------
 
+//        2)case
+//        1 --se----------
+//        2 --------s----e
 
 //        3)case
-//        1 --s--------e-----
-//        2 --------s----e
+//        1 --s---------e-----
+//        2 --------s--------e
 
 //        4)case
-//        1 --------s----e
-//        2 --s--------e---
-
-
-//        5)case ???
-//        1 ------s----e
-//        2 --s--------e
+//        1 --------s------e
+//        2 --s--------e----
 
                                 if (
-
                                         (employeeData1.start().isBefore(employeeData2.start()) &&
                                          employeeData1.end().isAfter(employeeData2.start()))
                                         ||
@@ -113,43 +100,19 @@ public class EmployeeService {
                                         (employeeData1.end().isAfter(employeeData2.start()) &&
                                          employeeData1.start().isBefore(employeeData2.end()))
                                 ) {
-
-                                    Pair<Integer, Integer> pair1 = Pair.of(employeeData1.employeeId(),
-                                            employeeData2.employeeId());
-                                    Pair<Integer, Integer> pair2 = Pair.of(employeeData2.employeeId(),
-                                            employeeData1.employeeId());
                                     int calculatedCommonMonths = calculateCommonMonths(employeeData1.start(),
                                             employeeData1.end(), employeeData2.start(), employeeData2.end());
-                                    if (workTogether.get(pair1) != null || workTogether.get(pair2) != null) {
-                                        int previousValue =
-                                                (workTogether.get(pair1) != null ? workTogether.get(pair1) : 0)
-                                                +
-                                                (workTogether.get(pair2) != null ? workTogether.get(pair2) : 0);
-
-                                        previousValue += calculatedCommonMonths;
-
-
-                                        workTogether.put(pair1, previousValue);
-
-                                    } else {
-                                        //create new key-value
-                                        workTogether.put(pair1, calculatedCommonMonths);
-                                    }
-
+                                    pairs.add(new EmployeePair(employeeData1.employeeId(),
+                                            employeeData2.employeeId(),
+                                            projectId,
+                                            calculatedCommonMonths));
                                 }
-
                             }
-
                         }
                     }
-
-
                 }
         );
 
-        workTogether.forEach((integerIntegerPair, timeWorkedTogether) -> {
-            pairs.add(new EmployeePair(integerIntegerPair.getFirst(), integerIntegerPair.getSecond(), timeWorkedTogether));
-        });
 
         return pairs;
     }
